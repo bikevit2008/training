@@ -1,5 +1,7 @@
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 /**
@@ -7,9 +9,8 @@ import java.util.Properties;
  */
 public class Templator {
     public static String get(String name, Properties props) throws IOException {
-        URL res = Templator.class.getResource("html/" + name);
-        Object data = res.getContent();
-        String html = new String((byte[]) data);
+        byte[] data = Files.readAllBytes(Paths.get("./html/index.html"));
+        String html = new String(data);
         for (Object k : props.keySet()) {
             String marker = "${" + k + "}";
             html = html.replace(marker, props.get(k).toString());
