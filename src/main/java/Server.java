@@ -40,7 +40,7 @@ public final class Server {
                     .group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ServerInitializer())
-                    .bind(8081)
+                    .bind(8087)
                     .sync()
                     .channel()
                     .closeFuture()
