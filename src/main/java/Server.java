@@ -36,11 +36,12 @@ public final class Server {
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
+
             new ServerBootstrap()
                     .group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ServerInitializer())
-                    .bind(8081)
+                    .bind(8080)
                     .sync()
                     .channel()
                     .closeFuture()
