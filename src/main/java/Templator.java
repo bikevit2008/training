@@ -9,7 +9,7 @@ import java.util.Properties;
  */
 public class Templator {
     public static String get(String name, Properties props) throws IOException {
-        byte[] data = Files.readAllBytes(Paths.get("./html/index.html"));
+        byte[] data = Files.readAllBytes(Paths.get("./html/" + name));
         String html = new String(data);
         for (Object k : props.keySet()) {
             String marker = "${" + k + "}";
