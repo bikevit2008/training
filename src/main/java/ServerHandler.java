@@ -38,10 +38,15 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  * Handles handshakes and messages
  */
     public class ServerHandler extends SimpleChannelInboundHandler<Object> {
-    public static ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    ChannelGroup room = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    ArrayList<ChannelGroup> rooms = new ArrayList<ChannelGroup>();
     @Override
     public void channelActive(final ChannelHandlerContext ctx) {
-        channels.add(ctx.channel());
+
+
+
+        rooms.add(room);
+        room.add(ctx.channel());
     }
 
     private static final String WEBSOCKET_PATH = "/websocket";
@@ -62,7 +67,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 
     }
-    ArrayList<Komnata> rooms = new ArrayList<Komnata>();
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
         // Handle a bad request.
@@ -86,9 +90,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             res.headers().set("Content-Type", "text/html; charset=UTF-8");
             HttpHeaders.setContentLength(res, content.readableBytes());
             sendHttpResponse(ctx, req, res);
-            Komnata room = new Komnata();
-            room.addChannel(ctx.channel());
-            rooms.add(room);
             return;
         }
         if ("/favicon.ico".equals(req.getUri())) {
@@ -126,15 +127,16 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).text();
         System.err.printf("%s received %s%n", ctx.channel(), request);
-        System.out.println(channels);
+        System.out.println(room);
+        System.out.println(rooms);
         if("play".equals(request)){
-            channels.writeAndFlush(new TextWebSocketFrame("play"));
+            room.writeAndFlush(new TextWebSocketFrame("play"));
         }
         else if("pause".equals(request)){
-            channels.writeAndFlush(new TextWebSocketFrame("pause"));
+            room.writeAndFlush(new TextWebSocketFrame("pause"));
         }
         else if(request.contains("currentTime=")){
-            channels.writeAndFlush(new TextWebSocketFrame(request));
+            room.writeAndFlush(new TextWebSocketFrame(request));
         }
     }
 
