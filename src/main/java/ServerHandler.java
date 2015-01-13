@@ -16,10 +16,7 @@
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -30,6 +27,9 @@ import io.netty.handler.codec.http.websocketx.*;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
+
+import java.util.ArrayList;
+
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -38,12 +38,10 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  * Handles handshakes and messages
  */
     public class ServerHandler extends SimpleChannelInboundHandler<Object> {
-    static final ChannelGroup channels = new DefaultChannelGroup("all-connected",GlobalEventExecutor.INSTANCE);
+    public static ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     @Override
     public void channelActive(final ChannelHandlerContext ctx) {
-
-                        channels.add(ctx.channel());
-
+        channels.add(ctx.channel());
     }
 
     private static final String WEBSOCKET_PATH = "/websocket";
@@ -56,7 +54,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
-            channels.add(ctx.channel());
         }
     }
 
@@ -65,6 +62,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 
     }
+    ArrayList<Room> rooms = new ArrayList<Room>();
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
         // Handle a bad request.
@@ -79,6 +77,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             return;
         }
 
+
         // Send the demo page and favicon.ico
         if (req.getUri().contains("/room")) {
             ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
@@ -86,8 +85,10 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
             res.headers().set("Content-Type", "text/html; charset=UTF-8");
             HttpHeaders.setContentLength(res, content.readableBytes());
-
             sendHttpResponse(ctx, req, res);
+            Room room = new Room();
+            room.addChannel(ctx.channel());
+            rooms.add(room);
             return;
         }
         if ("/favicon.ico".equals(req.getUri())) {
@@ -106,7 +107,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             handshaker.handshake(ctx.channel(), req);
         }
     }
-
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
 
         // Check for closing frame
