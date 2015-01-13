@@ -62,7 +62,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 
     }
-    ArrayList<Room> rooms = new ArrayList<Room>();
+    ArrayList<Komnata> rooms = new ArrayList<Komnata>();
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
         // Handle a bad request.
@@ -86,7 +86,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             res.headers().set("Content-Type", "text/html; charset=UTF-8");
             HttpHeaders.setContentLength(res, content.readableBytes());
             sendHttpResponse(ctx, req, res);
-            Room room = new Room();
+            Komnata room = new Komnata();
             room.addChannel(ctx.channel());
             rooms.add(room);
             return;
