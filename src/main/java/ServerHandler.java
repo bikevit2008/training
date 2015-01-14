@@ -28,7 +28,8 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -38,15 +39,13 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  * Handles handshakes and messages
  */
     public class ServerHandler extends SimpleChannelInboundHandler<Object> {
-    ChannelGroup room = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-    ArrayList<ChannelGroup> rooms = new ArrayList<ChannelGroup>();
+
+    static Map<String, ChannelGroup> rooms = new HashMap<String, ChannelGroup>();
     @Override
     public void channelActive(final ChannelHandlerContext ctx) {
-
-
-
-        rooms.add(room);
-        room.add(ctx.channel());
+        ChannelGroup room = new DefaultChannelGroup("0",GlobalEventExecutor.INSTANCE);
+        rooms.put("0", room);
+        rooms.get("0").add(ctx.channel());
     }
 
     private static final String WEBSOCKET_PATH = "/websocket";
@@ -127,16 +126,16 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).text();
         System.err.printf("%s received %s%n", ctx.channel(), request);
-        System.out.println(room);
+        System.out.println(rooms.get("0"));
         System.out.println(rooms);
         if("play".equals(request)){
-            room.writeAndFlush(new TextWebSocketFrame("play"));
+            rooms.get("0").writeAndFlush(new TextWebSocketFrame("play"));
         }
         else if("pause".equals(request)){
-            room.writeAndFlush(new TextWebSocketFrame("pause"));
+            rooms.get("0").writeAndFlush(new TextWebSocketFrame("pause"));
         }
         else if(request.contains("currentTime=")){
-            room.writeAndFlush(new TextWebSocketFrame(request));
+            rooms.get("0").writeAndFlush(new TextWebSocketFrame(request));
         }
     }
 
