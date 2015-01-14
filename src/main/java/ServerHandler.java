@@ -43,9 +43,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
     static Map<String, ChannelGroup> rooms = new HashMap<String, ChannelGroup>();
     @Override
     public void channelActive(final ChannelHandlerContext ctx) {
-        ChannelGroup room = new DefaultChannelGroup("0",GlobalEventExecutor.INSTANCE);
-        rooms.put("0", room);
-        rooms.get("0").add(ctx.channel());
+
     }
 
     private static final String WEBSOCKET_PATH = "/websocket";
@@ -68,6 +66,14 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
     }
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
+        if(rooms.containsKey("0")){
+
+        }
+        else{
+            ChannelGroup room = new DefaultChannelGroup("0",GlobalEventExecutor.INSTANCE);
+            rooms.put("0", room);
+        }
+        rooms.get("0").add(ctx.channel());
         // Handle a bad request.
         if (!req.getDecoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
