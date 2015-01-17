@@ -39,7 +39,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  * Handles handshakes and messages
  */
     public class ServerHandler extends SimpleChannelInboundHandler<Object> {
-
+    public String RoomUri;
     static Map<String, ChannelGroup> rooms = new HashMap<String, ChannelGroup>();
     @Override
     public void channelActive(final ChannelHandlerContext ctx) {
@@ -66,14 +66,22 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
     }
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
-        if(rooms.containsKey("0")){
+        String format = req.getUri().toString();
+        String substringAfter = format.substring(format.lastIndexOf("m") + 2);
+        if(substringAfter.endsWith("/")){
+            RoomUri = substringAfter.substring(0, substringAfter.length() - 1);
+        }
+        else{
+            RoomUri = substringAfter;
+        }
+        if(rooms.containsKey(RoomUri)){
 
         }
         else{
             ChannelGroup room = new DefaultChannelGroup("0",GlobalEventExecutor.INSTANCE);
-            rooms.put("0", room);
+            rooms.put(RoomUri, room);
         }
-        rooms.get("0").add(ctx.channel());
+        rooms.get(RoomUri).add(ctx.channel());
         // Handle a bad request.
         if (!req.getDecoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
@@ -88,12 +96,13 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 
         // Send the demo page and favicon.ico
-        if (req.getUri().contains("/room")) {
+        if (req.getUri().contains("/room/")) {
             ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
 
             res.headers().set("Content-Type", "text/html; charset=UTF-8");
             HttpHeaders.setContentLength(res, content.readableBytes());
+            System.out.println(RoomUri);
             sendHttpResponse(ctx, req, res);
             return;
         }
@@ -132,16 +141,16 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).text();
         System.err.printf("%s received %s%n", ctx.channel(), request);
-        System.out.println(rooms.get("0"));
+        System.out.println(rooms.get(RoomUri));
         System.out.println(rooms);
         if("play".equals(request)){
-            rooms.get("0").writeAndFlush(new TextWebSocketFrame("play"));
+            rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame("play"));
         }
         else if("pause".equals(request)){
-            rooms.get("0").writeAndFlush(new TextWebSocketFrame("pause"));
+            rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame("pause"));
         }
         else if(request.contains("currentTime=")){
-            rooms.get("0").writeAndFlush(new TextWebSocketFrame(request));
+            rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame(request));
         }
     }
 
