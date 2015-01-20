@@ -76,12 +76,14 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
         }
         if(rooms.containsKey(RoomUri)){
 
+            rooms.get(RoomUri).add(ctx.channel());
         }
         else{
-            ChannelGroup room = new DefaultChannelGroup("0",GlobalEventExecutor.INSTANCE);
+            ChannelGroup room = new DefaultChannelGroup(RoomUri ,GlobalEventExecutor.INSTANCE);
             rooms.put(RoomUri, room);
+
+            rooms.get(RoomUri).add(ctx.channel());
         }
-        rooms.get(RoomUri).add(ctx.channel());
         // Handle a bad request.
         if (!req.getDecoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
@@ -96,18 +98,12 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 
         // Send the demo page and favicon.ico
-        if (req.getUri().contains("/room/")) {
+        if (req.getUri().contains("/room/") && !req.getUri().contains("websocket")) {
             ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
 
             res.headers().set("Content-Type", "text/html; charset=UTF-8");
             HttpHeaders.setContentLength(res, content.readableBytes());
-            System.out.println(RoomUri);
-            sendHttpResponse(ctx, req, res);
-            return;
-        }
-        if ("/favicon.ico".equals(req.getUri())) {
-            FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;
         }
@@ -148,8 +144,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
         }
         else if("pause".equals(request)){
             rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame("pause"));
-        }
-        else if(request.contains("currentTime=")){
+        } else if(request.contains("currentTime=")){
             rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame(request));
         }
     }
@@ -179,8 +174,8 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
         ctx.close();
     }
 
-    private static String getWebSocketLocation(FullHttpRequest req) {
-        String location =  req.headers().get("Host") + WEBSOCKET_PATH;
+    private String getWebSocketLocation(FullHttpRequest req) {
+        String location =  req.headers().get("Host") + WEBSOCKET_PATH + req.getUri();
             return "ws://" + location;
     }
 }
