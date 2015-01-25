@@ -2,9 +2,9 @@
 <head>
     <title>Web Socket Test</title>
     <link rel="stylesheet" href="http://getbootstrap.com/dist/css/bootstrap.min.css" />
-    </head>
-<body>
-<script type="text/javascript">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="//f.vimeocdn.com/js/froogaloop2.min.js"></script>
+    <script type="text/javascript">
     var socket;
     if (!window.WebSocket) {
       window.WebSocket = window.MozWebSocket;
@@ -15,14 +15,64 @@
         var ta = document.getElementById('responseText');
         ta.value = event.data;
                                   if(event.data == "play"){
-                                        player.playVideo();
+                                        $(function() {
+    var player = $('iframe');
+    var url = window.location.protocol + player.attr('src').split('?')[0];
+        post('play', '');
+
+    // Helper function for sending a message to the player
+    function post(action, value) {
+        var data = {
+          method: action
+        };
+
+        if (value) {
+            data.value = value;
+        }
+
+        var message = JSON.stringify(data);
+        player[0].contentWindow.postMessage(data, url);
+    }});
                                   }
                                   else if(event.data == "pause"){
-                                        player.pauseVideo();
+                                       $(function() {
+    var player = $('iframe');
+    var url = window.location.protocol + player.attr('src').split('?')[0];
+        post('pause', '');
+
+    // Helper function for sending a message to the player
+    function post(action, value) {
+        var data = {
+          method: action
+        };
+
+        if (value) {
+            data.value = value;
+        }
+
+        var message = JSON.stringify(data);
+        player[0].contentWindow.postMessage(data, url);
+    }});
                                   }
     else if(event.data.indexOf("currentTime") > -1) {
-    if(document.getElementById('play').currentTime == event.data.substring(12)){}
-    else {document.getElementById('play').currentTime = event.data.substring(12);}
+                                           $(function() {
+    var player = $('iframe');
+    var url = window.location.protocol + player.attr('src').split('?')[0];
+        post('seekTo', event.data.substring(12));
+
+    // Helper function for sending a message to the player
+    function post(action, value) {
+        var data = {
+          method: action
+        };
+
+        if (value) {
+            data.value = value;
+        }
+
+        var message = JSON.stringify(data);
+        player[0].contentWindow.postMessage(data, url);
+    }});
     }
       };
       socket.onopen = function(event) {
@@ -44,72 +94,97 @@
         alert("The socket is not open.");
       }
     }
-                                function onPlay(){
+                                function Play(){
                                     send("play");
                                 }
-                                function onPause(){
+                                function Pause(){
                                     send("pause");
                                 }
-    function onSeeked(){
-        send("currentTime=" + document.getElementById('play').currentTime);
+    function Seeked(data){
+        send("currentTime=" + data.data.seconds);
     }
 </script>
+    </head>
+<body>
+
 <form onsubmit="return false;">
 <input type="text" name="message" value="Hello, World!"/>
 <input type="button" value="Send Web Socket Data" onclick="send(this.form.message.value)" />
 <h3>Output</h3>
 <textarea id="responseText" style="width:500px;height:300px;"></textarea>
 </form>
+<iframe id="player1" src="//player.vimeo.com/video/${videoId}?api=1&player_id=player1" width="630" height="354" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
 
-<div id="player"></div>
-<script type="text/javascript">
-      // 2. This code loads the IFrame Player API code asynchronously.
-      var tag = document.createElement('script');
+<div>
+    <p>Status: <span class="status">&hellip;</span></p>
+</div>
 
-      tag.src = "https://www.youtube.com/iframe_api";
-      var firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+<script>
+ $(function() {
+    var player = $('iframe');
+    var url = window.location.protocol + player.attr('src').split('?')[0];
+    var status = $('.status');
 
-      // 3. This function creates an iframe (and YouTube player)
-      //    after the API code downloads.
-      var player;
-      function onYouTubeIframeAPIReady() {
-        player = new YT.Player('player', {
-          height: '390',
-          width: '640',
-          videoId: 'LBr7kECsjcQ',
-          events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-          }
-        });
-      }
+    // Listen for messages from the player
+    if (window.addEventListener){
+        window.addEventListener('message', onMessageReceived, false);
+    }
+    else {
+        window.attachEvent('onmessage', onMessageReceived, false);
+    }
 
-      // 4. The API will call this function when the video player is ready.
-      function onPlayerReady(event) {
-      }
+    // Handle messages received from the player
+    function onMessageReceived(e) {
+        var data = JSON.parse(e.data);
 
-      // 5. The API calls this function when the player's state changes.
-      //    The function indicates that when playing a video (state=1),
-      //    the player should play for six seconds and then stop.
-      function onPlayerStateChange(event) {
+        switch (data.event) {
+            case 'ready':
+                onReady();
+                break;
 
-        switch (player.getPlayerState()) {
-    case -1:
-        break;
-    case 0:
-        break;
-    case 1:
-        onPlay();
-        break;
-    case 2:
-        onPause();
-        break;
-    case 3:
-        break;
-    case 5:
-        break;        
-}      }
+            case 'playProgress':
+                onPlayProgress(data.data);
+                break;
+
+            case 'pause':
+                Pause();
+                break;
+
+            case 'play':
+                Play();
+                break;
+            case 'seek':
+                Seeked(data);
+                break;
+        }
+    }
+
+    // Helper function for sending a message to the player
+    function post(action, value) {
+        var data = {
+          method: action
+        };
+
+        if (value) {
+            data.value = value;
+        }
+
+        var message = JSON.stringify(data);
+        player[0].contentWindow.postMessage(data, url);
+    }
+
+    function onReady() {
+        status.text('ready');
+
+        post('addEventListener', 'pause');
+        post('addEventListener', 'play');
+        post('addEventListener', 'seek');
+    }
+
+
+
+});
+
 </script>
 </body>
 </html>

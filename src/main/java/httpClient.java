@@ -14,7 +14,7 @@ public class httpClient {
         String content = null;
         URLConnection connection = null;
         try {
-            connection =  new URL("https://www.youtube.com/embed/LBr7kECsjcQ").openConnection();
+            connection =  new URL("https://www.youtube.com/embed/LBr7kECsjcQ?enablejsapi=1&origin=http%3A%2F%2Fonplayka.tk").openConnection();
             Scanner scanner = new Scanner(connection.getInputStream());
             scanner.useDelimiter("\\Z");
             content = scanner.next();

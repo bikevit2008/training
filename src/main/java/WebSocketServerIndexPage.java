@@ -29,16 +29,17 @@ public final class WebSocketServerIndexPage {
 
     private static final String NEWLINE = "\r\n";
 
-    public static ByteBuf getContent(String webSocketLocation) {
+    public static ByteBuf getContent(String webSocketLocation, String videoId) {
         Properties props = new Properties();
         props.setProperty("websocket-location", webSocketLocation);
+        props.setProperty("videoId", videoId);
         String html = "";
         try {
-            html = Templator.get("index.html", props);
+            html = Templator.get("video.html", props);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return Unpooled.copiedBuffer(html, CharsetUtil.US_ASCII);
+        return Unpooled.copiedBuffer(html, CharsetUtil.UTF_8);
     }
 
     private WebSocketServerIndexPage() {

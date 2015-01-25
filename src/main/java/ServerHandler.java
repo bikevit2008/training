@@ -41,9 +41,14 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
     public class ServerHandler extends SimpleChannelInboundHandler<Object> {
     public String RoomUri;
     static Map<String, ChannelGroup> rooms = new HashMap<String, ChannelGroup>();
+    static Map<String, String> videos = new HashMap<String, String>();
     @Override
     public void channelActive(final ChannelHandlerContext ctx) {
 
+    }
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx){
+        rooms.get(RoomUri).remove(ctx.channel());
     }
 
     private static final String WEBSOCKET_PATH = "/websocket";
@@ -96,10 +101,9 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             return;
         }
 
-
         // Send the demo page and favicon.ico
         if (req.getUri().contains("/room/") && !req.getUri().contains("websocket")) {
-            ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
+            ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req), videos.get(RoomUri));
             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
 
             res.headers().set("Content-Type", "text/html; charset=UTF-8");
@@ -107,7 +111,15 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             sendHttpResponse(ctx, req, res);
             return;
         }
+        if (req.getUri().equals("/")) {
+            ByteBuf content = home.getContent(getWebSocketLocation(req));
+            FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
 
+            res.headers().set("Content-Type", "text/html; charset=UTF-8");
+            HttpHeaders.setContentLength(res, content.readableBytes());
+            sendHttpResponse(ctx, req, res);
+            return;
+        }
         // Handshake
         WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
                 getWebSocketLocation(req), null, true);
@@ -116,7 +128,8 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
             handshaker.handshake(ctx.channel(), req);
-        }
+
+    }
     }
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
 
@@ -139,14 +152,28 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
         System.err.printf("%s received %s%n", ctx.channel(), request);
         System.out.println(rooms.get(RoomUri));
         System.out.println(rooms);
-        if("play".equals(request)){
-            rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame("play"));
+        if(rooms.get("websocket").contains(ctx.channel()))
+        {
+            String url = dateTimeModel.GenerateUrl();
+           videos.put(url, request);
+            ctx.channel().writeAndFlush(new TextWebSocketFrame(url));
+            System.out.println(url);
         }
-        else if("pause".equals(request)){
-            rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame("pause"));
-        } else if(request.contains("currentTime=")){
-            rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame(request));
-        }
+        for (Channel ch : rooms.get(RoomUri))
+            if (!ch.equals(ctx.channel()))
+            {
+                if("play".equals(request)){
+                    ch.writeAndFlush(new TextWebSocketFrame("play"));
+                }
+                else if("pause".equals(request)){
+                    ch.writeAndFlush(new TextWebSocketFrame("pause"));
+                } else if(request.contains("currentTime=")){
+                    ch.writeAndFlush(new TextWebSocketFrame(request));
+                }
+            }
+
+
+
     }
 
 

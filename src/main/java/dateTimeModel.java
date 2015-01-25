@@ -5,14 +5,14 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class dateTimeModel {
-    public static void main(String[] args){
+    public static String GenerateUrl(){
         Date dNow = new Date();
         SimpleDateFormat ft = new SimpleDateFormat ("yyMMddHHmmssSSS");
         String date = ft.format(dNow);
-        System.out.println("URL: " + replace(date));
-        System.out.println("CurrentTime yyMMddHHmmssSSS: " + date);
-
+        return String.valueOf(replace(date));
     }
+
+
     public static StringBuilder replace(String date){
         StringBuilder result = new StringBuilder();
         for (int i = 0; i<15; i++){

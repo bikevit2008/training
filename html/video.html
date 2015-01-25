@@ -23,6 +23,7 @@ div.chat nav {
     window.onload = function() {
     document.getElementById('link').value = window.location.toString().substring(7);};
     var socket;
+    var currentTime;
     if (!window.WebSocket) {
       window.WebSocket = window.MozWebSocket;
     }
@@ -70,6 +71,8 @@ div.chat nav {
     }});
                                   }
     else if(event.data.indexOf("currentTime") > -1) {
+    if(event.data.substring(12) == currentTime){}
+    else{
                                            $(function() {
     var player = $('iframe');
     var url = window.location.protocol + player.attr('src').split('?')[0];
@@ -87,7 +90,7 @@ div.chat nav {
 
         var message = JSON.stringify(data);
         player[0].contentWindow.postMessage(data, url);
-    }});
+    }});}
     }
       };
       socket.onopen = function(event) {
@@ -196,7 +199,7 @@ div.chat nav {
                 break;
 
             case 'playProgress':
-                onPlayProgress(data.data);
+                currentTime=(data.data.seconds);
                 break;
 
             case 'pause':
@@ -232,6 +235,7 @@ div.chat nav {
         post('addEventListener', 'pause');
         post('addEventListener', 'play');
         post('addEventListener', 'seek');
+        post('addEventListener', 'playProgress')
     }
 
 
