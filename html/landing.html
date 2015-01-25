@@ -53,7 +53,7 @@ div.room-url>p>span{
       window.WebSocket = window.MozWebSocket;
     }
     if (window.WebSocket) {
-      socket = new WebSocket("${websocket-location}");
+      socket = new WebSocket("ws://" + window.location.host + "${websocket-location}");
       socket.onmessage = function(event) {
         var result = document.getElementById('result');
         result.innerHTML = window.location + "room/"+ event.data;

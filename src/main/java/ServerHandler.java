@@ -202,7 +202,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
     }
 
     private String getWebSocketLocation(FullHttpRequest req) {
-        String location =  req.headers().get("Host") + WEBSOCKET_PATH + req.getUri();
-            return "ws://" + location;
+        String location = WEBSOCKET_PATH + req.getUri();
+            return location;
     }
 }
