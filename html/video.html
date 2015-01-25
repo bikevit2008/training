@@ -1,0 +1,242 @@
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>OnPlay: посмотри видео вместе с друзьями</title>
+        <link rel="stylesheet" href="http://getbootstrap.com/dist/css/bootstrap.min.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+.centered {
+    text-align:center;
+}
+div.menu {
+    margin-bottom:.2%;
+}
+div.chat {
+    height:800px;
+}
+div.chat nav {
+    margin-left:.7%;
+}
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="//f.vimeocdn.com/js/froogaloop2.min.js"></script>
+    <script type="text/javascript">
+    window.onload = function() {
+    document.getElementById('link').value = window.location.toString().substring(7);};
+    var socket;
+    if (!window.WebSocket) {
+      window.WebSocket = window.MozWebSocket;
+    }
+    if (window.WebSocket) {
+      socket = new WebSocket("${websocket-location}");
+      socket.onmessage = function(event) {
+                                  if(event.data == "play"){
+                                        $(function() {
+    var player = $('iframe');
+    var url = window.location.protocol + player.attr('src').split('?')[0];
+        post('play', '');
+
+    // Helper function for sending a message to the player
+    function post(action, value) {
+        var data = {
+          method: action
+        };
+
+        if (value) {
+            data.value = value;
+        }
+
+        var message = JSON.stringify(data);
+        player[0].contentWindow.postMessage(data, url);
+    }});
+                                  }
+                                  else if(event.data == "pause"){
+                                       $(function() {
+    var player = $('iframe');
+    var url = window.location.protocol + player.attr('src').split('?')[0];
+        post('pause', '');
+
+    // Helper function for sending a message to the player
+    function post(action, value) {
+        var data = {
+          method: action
+        };
+
+        if (value) {
+            data.value = value;
+        }
+
+        var message = JSON.stringify(data);
+        player[0].contentWindow.postMessage(data, url);
+    }});
+                                  }
+    else if(event.data.indexOf("currentTime") > -1) {
+                                           $(function() {
+    var player = $('iframe');
+    var url = window.location.protocol + player.attr('src').split('?')[0];
+        post('seekTo', event.data.substring(12));
+
+    // Helper function for sending a message to the player
+    function post(action, value) {
+        var data = {
+          method: action
+        };
+
+        if (value) {
+            data.value = value;
+        }
+
+        var message = JSON.stringify(data);
+        player[0].contentWindow.postMessage(data, url);
+    }});
+    }
+      };
+      socket.onopen = function(event) {
+      };
+      socket.onclose = function(event) {
+      };
+    } else {
+      alert("Your browser does not support Web Socket.");
+    }
+    function send(message) {
+      if (!window.WebSocket) { return; }
+      if (socket.readyState == WebSocket.OPEN) {
+        socket.send(message);
+      } else {
+        alert("The socket is not open.");
+      }
+    }
+                                function Play(){
+                                    send("play");
+                                }
+                                function Pause(){
+                                    send("pause");
+                                }
+    function Seeked(data){
+        send("currentTime=" + data.data.seconds);
+    }
+
+</script>
+    </head>
+
+    <body>
+        <div class="container" style="padding-top: 15px;">
+            <div class="row">
+                <nav class="navbar-default" style="border: none;">
+                    <div class="container-fluid">
+          <!-- Brand and toggle get grouped for better mobile display -->
+                        <div class="navbar-header"><a class="navbar-brand" href="/" style="padding: 0 0 0 15px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="100" height="50">
+              <!-- Created with Method Draw - http://github.com/duopixel/Method-Draw/ -->
+                                    <g>
+                                        <title>background</title>
+                                        <rect fill="none" id="canvas_background" height="52" width="102" y="-1" x="-1"></rect>
+                                        <g display="none" overflow="visible" y="0" x="0" height="100%" width="100%" id="canvasGrid">
+                                            <rect fill="url(#gridpattern)" stroke-width="0" y="0" x="0" height="100%" width="100%"></rect>
+                                        </g>
+                                    </g>
+                                    <g>
+                                        <title>Layer 1</title>
+                                        <ellipse stroke-dasharray="5,5" ry="19.062497" rx="19.062497" id="svg_6" cy="23.9375" cx="47.375004" stroke-width="1.5" stroke="#ffffff" fill="#24b7f2"></ellipse>
+                                        <line stroke-linecap="null" stroke-linejoin="null" id="svg_10" y2="37.499998" x2="42.6875" y1="13.125002" x1="40.187501" stroke-width="1.5" stroke="#ffffff" fill="none"></line>
+                                        <line stroke-linecap="null" stroke-linejoin="null" id="svg_12" y2="23.25" x2="58.062498" y1="13.250002" x1="40.187501" stroke-width="1.5" stroke="#ffffff" fill="none"></line>
+                                        <line stroke-linecap="null" stroke-linejoin="null" id="svg_13" y2="36.624998" x2="42.8125" y1="23.125" x1="57.812498" stroke-width="1.5" stroke="#ffffff" fill="none"></line>
+                                        <text stroke="#000000" transform="matrix(0.9835922179106751,0,0,0.9779735803604126,-3.3495292350167274,0.8101592473685741) " xml:space="preserve" text-anchor="left" font-family="Helvetica, Arial, sans-serif" font-size="24" id="svg_16" y="30.874999" x="3.437507" stroke-dasharray="5,5" stroke-width="0" fill="#24b7f2">on</text>
+                                    </g>
+                                </svg></a>
+                        </div>
+                        <div class="collapse navbar-collapse menu">
+                            <ul class="nav navbar-nav">
+                                <li><a href="/">Главная</a>
+                                </li>
+                            </ul>
+                        </div><!-- /.navbar-collapse -->
+                    </div><!-- /.container-fluid -->
+                </nav>
+            </div>
+            <div class="row">
+                <div class="col-lg-7 col-xs-12">
+                    <div class="row">
+                        <iframe id="player1" src="//player.vimeo.com/video/${videoId}?api=1&player_id=player1" width="630" height="354" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+                    </div></div>
+                    <div class="col-lg-5 col-xs-12" style="padding-top: 10px;">
+                        <div class="input-group"><span class="input-group-addon" style="color: #fff; background-color: #428bca; border-color: #357ebd;" id="basic-addon1">Ссылка на просмотр</span><input type="text" class="form-control" placeholder="ссылка на просмотр" aria-describedby="ссылка на просмотр" value="" id="link" onload="javascript:window.location"><span class="input-group-btn"></span>
+                        </div>
+                    </div>
+            </div>
+            <div class="row">
+                <hr>
+            </div>
+            <div class="row">
+                <div class="col-lg-12 col-xs-12 centered">
+                    <p class="text-muted">© OnPlay, 2015</p>
+                </div>
+            </div>
+        </div>
+        <script>
+ $(function() {
+    var player = $('iframe');
+    var url = window.location.protocol + player.attr('src').split('?')[0];
+    var status = $('.status');
+
+    // Listen for messages from the player
+    if (window.addEventListener){
+        window.addEventListener('message', onMessageReceived, false);
+    }
+    else {
+        window.attachEvent('onmessage', onMessageReceived, false);
+    }
+
+    // Handle messages received from the player
+    function onMessageReceived(e) {
+        var data = JSON.parse(e.data);
+
+        switch (data.event) {
+            case 'ready':
+                onReady();
+                break;
+
+            case 'playProgress':
+                onPlayProgress(data.data);
+                break;
+
+            case 'pause':
+                Pause();
+                break;
+
+            case 'play':
+                Play();
+                break;
+            case 'seek':
+                Seeked(data);
+                break;
+        }
+    }
+
+    // Helper function for sending a message to the player
+    function post(action, value) {
+        var data = {
+          method: action
+        };
+
+        if (value) {
+            data.value = value;
+        }
+
+        var message = JSON.stringify(data);
+        player[0].contentWindow.postMessage(data, url);
+    }
+
+    function onReady() {
+        status.text('ready');
+
+        post('addEventListener', 'pause');
+        post('addEventListener', 'play');
+        post('addEventListener', 'seek');
+    }
+
+
+
+});
+
+</script>
+</body></html>
