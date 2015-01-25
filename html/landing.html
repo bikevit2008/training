@@ -56,9 +56,9 @@ div.room-url>p>span{
       socket = new WebSocket("${websocket-location}");
       socket.onmessage = function(event) {
         var result = document.getElementById('result');
-        result.innerHTML = window.location + "/room/"+ event.data;
+        result.innerHTML = window.location + "room/"+ event.data;
         var resultLink = document.getElementById('result-link');
-        resultLink.href = window.location + "/room/"+ event.data;
+        resultLink.href = window.location + "room/"+ event.data;
       };
       socket.onopen = function(event) {
       };
