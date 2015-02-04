@@ -55,10 +55,12 @@ div.room-url>p>span{
     if (window.WebSocket) {
       socket = new WebSocket("ws://" + window.location.host + "${websocket-location}");
       socket.onmessage = function(event) {
+      var parsed = JSON.parse(event.data);
+      if(parsed.method == "RoomLink"){
         var result = document.getElementById('result');
-        result.innerHTML = window.location + "room/"+ event.data;
+        result.innerHTML = window.location + "room/"+ parsed.value;
         var resultLink = document.getElementById('result-link');
-        resultLink.href = window.location + "room/"+ event.data;
+        resultLink.href = "/room/"+ parsed.value;}
       };
       socket.onopen = function(event) {
       };
@@ -75,8 +77,61 @@ div.room-url>p>span{
         alert("The socket is not open.");
       }
     }
-
+    function sendId() {
+	var parser = document.createElement('a');
+	parser.href = document.getElementById('link').value;
+	var result = document.getElementById('result').innerHTML;
+	result = parseId(endsWith(parser.pathname));
+	if(result.length > 0){
+	send(JSON.stringify({'method' : 'VideoId', 'value': result}));
+	}
+}
+    function endsWith(str){
+    if(str.lastIndexOf("/") == str.length - 1){
+    return str.substring(0, str.length - 2);
+    }
+    else{
+    return str;
+    }
+    }
+    function parseId(str){
+    var out = str.substring(str.lastIndexOf("/") + 1);
+    return out;
+    }
 </script>
+    <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+         (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+         m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+         })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+         
+         ga('create', 'UA-59019290-1', 'auto');
+         ga('send', 'pageview');
+         
+        </script>
+    <script type="text/javascript">
+        (function (d, w, c) {
+         (w[c] = w[c] || []).push(function() {
+                                  try {
+                                  w.yaCounter28113357 = new Ya.Metrika({
+                                                                       id:28113357,
+                                                                       webvisor:true
+                                                                       });
+                                  } catch(e) { }
+                                  });
+         
+         var n = d.getElementsByTagName("script")[0],
+         s = d.createElement("script"),
+         f = function () { n.parentNode.insertBefore(s, n); };
+         s.type = "text/javascript";
+         s.async = true;
+         s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js";
+         
+         if (w.opera == "[object Opera]") {
+         d.addEventListener("DOMContentLoaded", f, false);
+         } else { f(); }
+         })(document, window, "yandex_metrika_callbacks");
+        </script>
     </head>
 
     <body>
@@ -142,19 +197,6 @@ div.room-url>p>span{
         </div>
 
     </div>
-    
-<script>
-function sendId() {
-	var parser = document.createElement('a');
-	parser.href = document.getElementById('link').value;
-	var result = document.getElementById('result').innerHTML;
-	result = parser.pathname.replace(/\//g, "").valueOf();
-	if(result.length > 0){
-	send(result);
-	}
-}
-
-</script>
 
 </body>
 </html>

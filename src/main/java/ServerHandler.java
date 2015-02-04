@@ -19,17 +19,17 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
 
-
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentNavigableMap;
 
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -38,23 +38,30 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 /**
  * Handles handshakes and messages
  */
-    public class ServerHandler extends SimpleChannelInboundHandler<Object> {
+    public class ServerHandler extends SimpleChannelInboundHandler<Object>{
     public String RoomUri;
-    static Map<String, ChannelGroup> rooms = new HashMap<String, ChannelGroup>();
-    static Map<String, String> videos = new HashMap<String, String>();
-    @Override
-    public void channelActive(final ChannelHandlerContext ctx) {
+    public int RoomUsersNow;
+    DB db = DBMaker
+            .newFileDB(new File("DB"))
+            .closeOnJvmShutdown()
+            .make();
 
-    }
+    //open an collection, TreeMap has better performance then HashMap
+    ConcurrentNavigableMap<String,String> videos = db.getTreeMap("videos");
+    static Map<String, ChannelGroup> rooms = new HashMap<String, ChannelGroup>();
+
     @Override
     public void channelInactive(ChannelHandlerContext ctx){
-        rooms.get(RoomUri).remove(ctx.channel());
+        if(rooms.containsKey(RoomUri)){
+            rooms.get(RoomUri).remove(ctx.channel());
+
+            rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame(JSON.encode("CountUsersOnline", String.valueOf(rooms.get(RoomUri).size()))));
+        }
     }
 
     private static final String WEBSOCKET_PATH = "/websocket";
 
     private WebSocketServerHandshaker handshaker;
-
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof FullHttpRequest) {
@@ -66,28 +73,33 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
-
-
     }
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
         String format = req.getUri().toString();
         String substringAfter = format.substring(format.lastIndexOf("m") + 2);
-        if(substringAfter.endsWith("/")){
-            RoomUri = substringAfter.substring(0, substringAfter.length() - 1);
-        }
-        else{
-            RoomUri = substringAfter;
-        }
-        if(rooms.containsKey(RoomUri)){
+        RoomUri = substringAfter.replace("/", "");
 
-            rooms.get(RoomUri).add(ctx.channel());
+        if(videos.containsKey(RoomUri)){
+            if(rooms.containsKey(RoomUri)){
+
+            }
+            else{
+                ChannelGroup room = new DefaultChannelGroup(RoomUri ,GlobalEventExecutor.INSTANCE);
+                rooms.put(RoomUri, room);
+
+            }
         }
-        else{
-            ChannelGroup room = new DefaultChannelGroup(RoomUri ,GlobalEventExecutor.INSTANCE);
+        else if(req.getUri().toString().replace("/", "").equals("websocket")){
+
+            ChannelGroup room = new DefaultChannelGroup("websocket" ,GlobalEventExecutor.INSTANCE);
+
             rooms.put(RoomUri, room);
 
             rooms.get(RoomUri).add(ctx.channel());
+        }
+        else{
+            System.out.println(videos.containsKey(RoomUri));
         }
         // Handle a bad request.
         if (!req.getDecoderResult().isSuccess()) {
@@ -100,7 +112,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
             return;
         }
-
+        if(videos.containsKey(RoomUri)){
         // Send the demo page and favicon.ico
         if (req.getUri().contains("/room/") && !req.getUri().contains("websocket")) {
             ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req), videos.get(RoomUri));
@@ -110,8 +122,9 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             HttpHeaders.setContentLength(res, content.readableBytes());
             sendHttpResponse(ctx, req, res);
             return;
+            }
         }
-        if (req.getUri().equals("/")) {
+         if (req.getUri().equals("/")) {
             ByteBuf content = home.getContent(getWebSocketLocation(req));
             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
 
@@ -120,6 +133,16 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             sendHttpResponse(ctx, req, res);
             return;
         }
+        else if (req.getUri().equals("/404")) {
+            ByteBuf content = notFound.getContent();
+            FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
+
+            res.headers().set("Content-Type", "text/html; charset=UTF-8");
+            HttpHeaders.setContentLength(res, content.readableBytes());
+            sendHttpResponse(ctx, req, res);
+            return;
+        }
+        else if(req.getUri().contains("websocket")){
         // Handshake
         WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
                 getWebSocketLocation(req), null, true);
@@ -128,8 +151,19 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
             handshaker.handshake(ctx.channel(), req);
+        }
+        }
+        else{
 
+             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FOUND);
+             res.headers().set("Location", "/404");
+             res.headers().set("Content-Type", "text/html; charset=UTF-8");
+             sendHttpResponse(ctx, req, res);
+         }
     }
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) {
+
     }
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
 
@@ -152,25 +186,36 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
         System.err.printf("%s received %s%n", ctx.channel(), request);
         System.out.println(rooms.get(RoomUri));
         System.out.println(rooms);
+        if(rooms.containsKey(RoomUri)){
+
+            rooms.get(RoomUri).add(ctx.channel());
+            rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame(JSON.encode("CountUsersOnline", String.valueOf(rooms.get(RoomUri).size()))));
+
+        }
+        if(rooms.get("websocket") != null){
         if(rooms.get("websocket").contains(ctx.channel()))
         {
             String url = dateTimeModel.GenerateUrl();
-           videos.put(url, request);
-            ctx.channel().writeAndFlush(new TextWebSocketFrame(url));
+            videos.put(url, JSON.parseValue(request));
+            db.commit();
+            ctx.channel().writeAndFlush(new TextWebSocketFrame(JSON.encode("RoomLink", url)));
             System.out.println(url);
         }
+        }
+        if(rooms.containsKey(RoomUri)){
         for (Channel ch : rooms.get(RoomUri))
             if (!ch.equals(ctx.channel()))
             {
-                if("play".equals(request)){
-                    ch.writeAndFlush(new TextWebSocketFrame("play"));
+                if(JSON.parseMethod(request).equals("Play")){
+                    ch.writeAndFlush(new TextWebSocketFrame(JSON.encode("Play", "")));
                 }
-                else if("pause".equals(request)){
-                    ch.writeAndFlush(new TextWebSocketFrame("pause"));
-                } else if(request.contains("currentTime=")){
-                    ch.writeAndFlush(new TextWebSocketFrame(request));
+                else if(JSON.parseMethod(request).equals("Pause")){
+                    ch.writeAndFlush(new TextWebSocketFrame(JSON.encode("Pause", "")));
+                } else if(JSON.parseMethod(request).equals("CurrentTime")){
+                    ch.writeAndFlush(new TextWebSocketFrame(JSON.encode("CurrentTime", JSON.parseValue(request))));
                 }
             }
+        }
 
 
 

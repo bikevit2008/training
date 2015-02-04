@@ -7,125 +7,198 @@
 .centered {
     text-align:center;
 }
-div.menu {
-    margin-bottom:.2%;
-}
 div.chat {
     height:800px;
 }
 div.chat nav {
     margin-left:.7%;
 }
+div.videoplayer {
+    padding:0;
+    border:1px solid #e7e7e7;
+}
+div.videolink {
+    padding-top:1.5%;
+    padding-left:0;
+}
+span.viewing {
+    float:left;
+    margin-right:1.5%;
+    line-height:2.5em;
+    padding-left:0.5%;
+}
+        .icon{
+        margin-bottom: -3px;
+        margin-top: 3px;
+        margin-right: 5px;
+        }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
     <script src="//f.vimeocdn.com/js/froogaloop2.min.js"></script>
     <script type="text/javascript">
-    window.onload = function() {
-    document.getElementById('link').value = window.location.toString().substring(7);};
+    window.onload = function () {
+        document.getElementById('link').value = window.location.toString().substring(7);
+    };
     var socket;
     var currentTime;
+    var playerStatus;
     if (!window.WebSocket) {
-      window.WebSocket = window.MozWebSocket;
+        window.WebSocket = window.MozWebSocket;
     }
     if (window.WebSocket) {
-      socket = new WebSocket("ws://" + window.location.host + "${websocket-location}");
-      socket.onmessage = function(event) {
-                                  if(event.data == "play"){
-                                        $(function() {
-    var player = $('iframe');
-    var url = window.location.protocol + player.attr('src').split('?')[0];
-        post('play', '');
+        socket = new WebSocket("ws://" + window.location.host + "${websocket-location}");
+        socket.onmessage = function (event) {
+            var parsed = JSON.parse(event.data);
+            if (parsed.method == "Play") {
+                $(function () {
+                    var player = $('iframe');
+                    var url = window.location.protocol + player.attr('src').split('?')[0];
+                    post('play', '');
 
-    // Helper function for sending a message to the player
-    function post(action, value) {
-        var data = {
-          method: action
+                    // Helper function for sending a message to the player
+                    function post(action, value) {
+                        var data = {
+                            method: action
+                        };
+
+                        if (value) {
+                            data.value = value;
+                        }
+
+                        var message = JSON.stringify(data);
+                        player[0].contentWindow.postMessage(data, url);
+                    }
+                });
+            } else if (parsed.method == "Pause") {
+                $(function () {
+                    var player = $('iframe');
+                    var url = window.location.protocol + player.attr('src').split('?')[0];
+                    post('pause', '');
+
+                    // Helper function for sending a message to the player
+                    function post(action, value) {
+                        var data = {
+                            method: action
+                        };
+
+                        if (value) {
+                            data.value = value;
+                        }
+
+                        var message = JSON.stringify(data);
+                        player[0].contentWindow.postMessage(data, url);
+                    }
+                });
+            } else if (parsed.method == "CurrentTime") {
+                if (parsed.value == currentTime) {} else {
+                    $(function () {
+                        var player = $('iframe');
+                        var url = window.location.protocol + player.attr('src').split('?')[0];
+                        post('seekTo', parsed.value);
+
+                        // Helper function for sending a message to the player
+                        function post(action, value) {
+                            var data = {
+                                method: action
+                            };
+
+                            if (value) {
+                                data.value = value;
+                            }
+
+                            var message = JSON.stringify(data);
+                            player[0].contentWindow.postMessage(data, url);
+                        }
+                    });
+                }
+            } else if (parsed.method == "CountUsersOnline") {
+                document.getElementById('watchers').innerHTML = parsed.value;
+            }
+        };
+        socket.onopen = function (event) {
+            send(JSON.stringify({
+                'method': 'UserOnline',
+                'value': ''
+            }));
         };
 
-        if (value) {
-            data.value = value;
-        }
-
-        var message = JSON.stringify(data);
-        player[0].contentWindow.postMessage(data, url);
-    }});
-                                  }
-                                  else if(event.data == "pause"){
-                                       $(function() {
-    var player = $('iframe');
-    var url = window.location.protocol + player.attr('src').split('?')[0];
-        post('pause', '');
-
-    // Helper function for sending a message to the player
-    function post(action, value) {
-        var data = {
-          method: action
-        };
-
-        if (value) {
-            data.value = value;
-        }
-
-        var message = JSON.stringify(data);
-        player[0].contentWindow.postMessage(data, url);
-    }});
-                                  }
-    else if(event.data.indexOf("currentTime") > -1) {
-    if(event.data.substring(12) == currentTime){}
-    else{
-                                           $(function() {
-    var player = $('iframe');
-    var url = window.location.protocol + player.attr('src').split('?')[0];
-        post('seekTo', event.data.substring(12));
-
-    // Helper function for sending a message to the player
-    function post(action, value) {
-        var data = {
-          method: action
-        };
-
-        if (value) {
-            data.value = value;
-        }
-
-        var message = JSON.stringify(data);
-        player[0].contentWindow.postMessage(data, url);
-    }});}
-    }
-      };
-      socket.onopen = function(event) {
-      };
-      socket.onclose = function(event) {
-      };
+    socket.onclose = function (event) {};
     } else {
-      alert("Your browser does not support Web Socket.");
-    }
-    function send(message) {
-      if (!window.WebSocket) { return; }
-      if (socket.readyState == WebSocket.OPEN) {
-        socket.send(message);
-      } else {
-        alert("The socket is not open.");
-      }
-    }
-                                function Play(){
-                                    send("play");
-                                }
-                                function Pause(){
-                                    send("pause");
-                                }
-    function Seeked(data){
-        send("currentTime=" + data.data.seconds);
+        alert("Your browser does not support Web Socket.");
     }
 
-</script>
+    function send(message) {
+        if (!window.WebSocket) {
+            return;
+        }
+        if (socket.readyState == WebSocket.OPEN) {
+            socket.send(message);
+        } else {
+            alert("The socket is not open.");
+        }
+    }
+
+    function Play() {
+        send(JSON.stringify({
+            'method': 'Play',
+            'value': ''
+        }));
+    }
+
+    function Pause() {
+        send(JSON.stringify({
+            'method': 'Pause',
+            'value': ''
+        }));
+    }
+
+    function Seeked(data) {
+        send(JSON.stringify({
+            'method': 'CurrentTime',
+            'value': data.data.seconds
+        }));
+    }
+        </script>
+    <script>
+            (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+             (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+             m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+             })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+             
+             ga('create', 'UA-59019290-1', 'auto');
+             ga('send', 'pageview');
+             
+            </script>
+    
+    <script type="text/javascript">
+        (function (d, w, c) {
+         (w[c] = w[c] || []).push(function() {
+                                  try {
+                                  w.yaCounter28113357 = new Ya.Metrika({
+                                                                       id:28113357,
+                                                                       webvisor:true
+                                                                       });
+                                  } catch(e) { }
+                                  });
+         
+         var n = d.getElementsByTagName("script")[0],
+         s = d.createElement("script"),
+         f = function () { n.parentNode.insertBefore(s, n); };
+         s.type = "text/javascript";
+         s.async = true;
+         s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js";
+         
+         if (w.opera == "[object Opera]") {
+         d.addEventListener("DOMContentLoaded", f, false);
+         } else { f(); }
+         })(document, window, "yandex_metrika_callbacks");
+        </script>
     </head>
 
     <body>
         <div class="container" style="padding-top: 15px;">
             <div class="row">
-                <nav class="navbar-default" style="border: none;">
-                    <div class="container-fluid">
+                <nav class="navbar-default menu">
           <!-- Brand and toggle get grouped for better mobile display -->
                         <div class="navbar-header"><a class="navbar-brand" href="/" style="padding: 0 0 0 15px;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="100" height="50">
@@ -147,22 +220,41 @@ div.chat nav {
                                     </g>
                                 </svg></a>
                         </div>
-                        <div class="collapse navbar-collapse menu">
+                        <div class="collapse navbar-collapse">
                             <ul class="nav navbar-nav">
                                 <li><a href="/">Главная</a>
                                 </li>
                             </ul>
                         </div><!-- /.navbar-collapse -->
-                    </div><!-- /.container-fluid -->
                 </nav>
             </div>
             <div class="row">
-                <div class="col-lg-7 col-xs-12">
-                    <div class="row">
-                        <iframe id="player1" src="//player.vimeo.com/video/${videoId}?api=1&player_id=player1" width="630" height="354" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-                    </div></div>
-                    <div class="col-lg-5 col-xs-12" style="padding-top: 10px;">
-                        <div class="input-group"><span class="input-group-addon" style="color: #fff; background-color: #428bca; border-color: #357ebd;" id="basic-addon1">Ссылка на просмотр</span><input type="text" class="form-control" placeholder="ссылка на просмотр" aria-describedby="ссылка на просмотр" value="" id="link" onload="javascript:window.location"><span class="input-group-btn"></span>
+                <div class="col-lg-12 col-xs-12 videoplayer">
+                  <div class="embed-responsive embed-responsive-16by9">
+                          <iframe id="player1" src="//player.vimeo.com/video/${videoId}?api=1&player_id=player1" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+                  </div>
+                </div>
+            </div>
+            <div class="row">
+                    <div class="col-lg-6 col-xs-12 videolink">
+                    <span class="viewing"><svg width="30" height="17" xmlns="http://www.w3.org/2000/svg" class="icon">
+                        <!— Created with Method Draw - http://github.com/duopixel/Method-Draw/ —>
+                        <g>
+                            <title>background</title>
+                            <rect fill="none" id="canvas_background" height="19" width="32" y="-1" x="-1"></rect>
+                            <g display="none" overflow="visible" y="0" x="0" height="100%" width="100%" id="canvasGrid">
+                                <rect fill="url(#gridpattern)" stroke-width="0" y="0" x="0" height="100%" width="100%"></rect>
+                            </g>
+                        </g>
+                        <g>
+                            <title>Layer 1</title>
+                            <ellipse stroke="#666666" ry="7.66662" rx="14.08324" id="svg_3" cy="8.48765" cx="15" stroke-width="1.5" fill="#7f7f7f"></ellipse>
+                            <ellipse stroke="#7f7f7f" ry="5.93749" rx="5.62499" id="svg_4" cy="8.2689" cx="15.09375" stroke-width="1.5" fill="#ffffff"></ellipse>
+                            <ellipse stroke="#7f7f7f" ry="1.53124" rx="1.80347" id="svg_6" cy="8.22014" cx="15.19958" stroke-width="1.5" fill="#7f7f7f"></ellipse>
+                        </g>
+                    </svg><span id="watchers">1</span> зрител.</span>
+                        <div class="input-group">
+                        <span class="input-group-addon" style="color: #fff; background-color: #428bca; border-color: #357ebd;" id="basic-addon1">Ссылка на просмотр</span><input type="text" class="form-control" placeholder="ссылка на просмотр" aria-describedby="ссылка на просмотр" value="" id="link" onload="javascript:window.location"><span class="input-group-btn"></span>
                         </div>
                     </div>
             </div>
