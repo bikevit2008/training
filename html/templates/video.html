@@ -1,0 +1,567 @@
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>OnPlay: посмотри видео вместе с друзьями</title>
+    <link rel="stylesheet" href="http://getbootstrap.com/dist/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="verify-reformal" content="e7754899df9ffd588b84479d" />
+    <style>
+        a {
+        text-decoration:none;
+        color:rgb(36, 183, 242);
+        }
+        .centered {
+        text-align:center;
+        }
+        div.chat {
+        height:800px;
+        }
+        div.chat nav {
+        margin-left:.7%;
+        }
+        div.videoplayer {
+        padding:0;
+        border:1px solid #e7e7e7;
+        position:relative;
+        }
+        div.videolink {
+        padding-top:1.5%;
+        padding-left:0;
+        }
+        span.viewing {
+        float:left;
+        margin-right:1.5%;
+        line-height:2.5em;
+        padding-left:0.5%;
+        }
+        .icon{
+        margin-bottom: -3px;
+        margin-top: 3px;
+        margin-right: 5px;
+        }
+        div.elements {
+        position:absolute;
+        width:100%;
+        bottom:0;
+        z-index:5;
+        height:33px;
+        line-height:33px;
+        background:rgba(246,246,246,.85);
+        overflow:hidden;
+        }
+        div.elements span {
+        float:left;
+        height:100%;
+        text-align:center;
+        border-right:1px solid #dddddd;
+        overflow:hidden;
+        font-size: 1em;
+        }
+        div.elements input {
+        padding:7px;
+        cursor:pointer;
+        }
+        div.elements p {
+        display:inline;
+        }
+        div.elements>span>a {
+        color:black;
+        }
+        span.playToggle {
+        width:4%;
+        }
+        a.pause {
+        display:none;
+        }
+        a.fullscreenExit{
+        display: none;
+        }
+        span.time {
+        width:12%;
+        -ms-user-select: none;
+        -moz-user-select: none;
+        -khtml-user-select: none;
+        -webkit-user-select: none;
+        }
+        span.seek {
+        width:66%;
+        position:relative;
+        }
+        span.volume {
+        width:10%;
+        position:relative;
+        text-align:left!important;
+        padding-left:1%;
+        }
+        div.progressBar	{
+        width:90%;
+        height:9px;
+        background-color:#4f4f4f;
+        position:absolute;
+        top:50%;
+        left:55%;
+        margin:-4.5px 0 0 -50%;
+        -webkit-border-radius:3px;
+        -moz-border-radius:3px;
+        border-radius:3px;
+        cursor:pointer;
+        }
+        div.timeBar {
+        max-width:100%;
+        height:100%;
+        width:0%;
+        position:absolute;
+        background-color:#898989;
+        -webkit-border-radius:0;
+        -webkit-border-top-left-radius:3px;
+        -webkit-border-bottom-left-radius:3px;
+        -moz-border-radius:0;
+        -moz-border-radius-topleft:3px;
+        -moz-border-radius-bottomleft:3px;
+        border-radius:0;
+        border-top-left-radius:3px;
+        border-bottom-left-radius:3px;
+        }
+        div.bufferBar {
+        max-width:100%;
+        height:100%;
+        width:0%;
+        position:absolute;
+        background-color:#B8B8B8;
+        }
+        span.volume div.progressBar {
+        width:54%;
+        margin:-4.5px 0 0 -25%;
+        }
+        span.hd {
+        width:4%;
+        }
+        span.full {
+        width:4%;
+        border-right:0!important;
+        }
+        /* ÏÐÈÌÅÐ: Ïåðåêðàøèâàíèå ýëåìåíòîâ */
+
+        /*
+        svg {
+        fill:#5DBE57;
+        }
+        div.elements {
+        background:rgba(226, 226, 226, 0.75);
+        color:#5DBE57;
+        }
+        div.elements>span {
+        border-color:#0AB100;
+        }
+        div.elements a {
+        color:#5DBE57!important;
+        }
+        div.progressBar {
+        background:#FAEDCB;
+        }
+        div.timeBar {
+        background:#D8A01C;
+        }*/
+
+        /* ÏÐÈÌÅÐ: Ïåðåêðàøèâàíèå ýëåìåíòîâ */
+    </style>
+    <script type="text/javascript">
+    window.onload = function () {
+        document.getElementById('link').value = window.location.toString().substring(7);
+    };
+    var posX;
+    var socket;
+    var currentTime;
+    var playerStatusGot = "";
+    var playerStatusSetted;
+    var socketInterval;
+    var duration;
+    var percentVideo;
+    if (!window.WebSocket) {
+        window.WebSocket = window.MozWebSocket;
+    }
+    if (window.WebSocket) {
+        socket = new WebSocket("ws://" + window.location.host + "${websocket-location}");
+        socket.onmessage = function (event) {
+            var parsed = JSON.parse(event.data);
+            if (parsed.method == "Play") {
+            playerPlay();
+            } else if (parsed.method == "Pause") {
+            playerPause();
+            } else if (parsed.method == "CurrentTime") {
+                if (parsed.value == currentTime) {} else {
+            playerSeeked(parsed.value);
+                }
+            } else if (parsed.method == "CountUsersOnline") {
+                document.getElementById('watchers').innerHTML = parsed.value;
+            }
+            else if(parsed.method == "Buffering"){
+            playerBuffering();
+            }
+        };
+
+        socket.onopen = function (event) {
+            send(JSON.stringify({
+                'method': 'UserOnline',
+                'value': ''
+            }));
+        };
+
+    socket.onclose = function (event) {
+    socket = new WebSocket("ws://" + window.location.host + "${websocket-location}");
+    };
+    } else {
+        alert("Your browser does not support Web Socket.");
+    }
+
+    function send(message) {
+        if (!window.WebSocket) {
+            return;
+        }
+        if (socket.readyState == WebSocket.OPEN) {
+            socket.send(message);
+        } else {
+            alert("The socket is not open.");
+        }
+    }
+
+    function Play() {
+        send(JSON.stringify({
+            'method': 'Play',
+            'value': ''
+        }));
+    }
+
+    function Pause() {
+        send(JSON.stringify({
+            'method': 'Pause',
+            'value': ''
+        }));
+    }
+
+    function Seeked(seconds) {
+        send(JSON.stringify({
+            'method': 'CurrentTime',
+            'value': seconds
+        }));
+    }
+        function Buffering() {
+        send(JSON.stringify({
+            'method': 'Buffering',
+            'value': ''
+        }));
+    }
+        </script>
+    ${script}
+    <!--script>
+            (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+             (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+             m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+             })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+             
+             ga('create', 'UA-59019290-1', 'auto');
+             ga('send', 'pageview');
+             
+            </script>
+
+    <script type="text/javascript">
+        (function (d, w, c) {
+         (w[c] = w[c] || []).push(function() {
+                                  try {
+                                  w.yaCounter28113357 = new Ya.Metrika({
+                                                                       id:28113357,
+                                                                       webvisor:true
+                                                                       });
+                                  } catch(e) { }
+                                  });
+         
+         var n = d.getElementsByTagName("script")[0],
+         s = d.createElement("script"),
+         f = function () { n.parentNode.insertBefore(s, n); };
+         s.type = "text/javascript";
+         s.async = true;
+         s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js";
+         
+         if (w.opera == "[object Opera]") {
+         d.addEventListener("DOMContentLoaded", f, false);
+         } else { f(); }
+         })(document, window, "yandex_metrika_callbacks");
+        </script-->
+</head>
+
+<body>
+<div class="container" style="padding-top: 15px;">
+    <div class="row">
+        <nav class="navbar-default menu">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header"><a class="navbar-brand" href="/" style="padding: 0 0 0 15px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="100" height="50">
+                    <!-- Created with Method Draw - http://github.com/duopixel/Method-Draw/ -->
+                    <g>
+                        <title>background</title>
+                        <rect fill="none" id="canvas_background" height="52" width="102" y="-1" x="-1"></rect>
+                        <g display="none" overflow="visible" y="0" x="0" height="100%" width="100%" id="canvasGrid">
+                            <rect fill="url(#gridpattern)" stroke-width="0" y="0" x="0" height="100%" width="100%"></rect>
+                        </g>
+                    </g>
+                    <g>
+                        <title>Layer 1</title>
+                        <ellipse stroke-dasharray="5,5" ry="19.062497" rx="19.062497" id="svg_6" cy="23.9375" cx="47.375004" stroke-width="1.5" stroke="#ffffff" fill="#24b7f2"></ellipse>
+                        <line stroke-linecap="null" stroke-linejoin="null" id="svg_10" y2="37.499998" x2="42.6875" y1="13.125002" x1="40.187501" stroke-width="1.5" stroke="#ffffff" fill="none"></line>
+                        <line stroke-linecap="null" stroke-linejoin="null" id="svg_12" y2="23.25" x2="58.062498" y1="13.250002" x1="40.187501" stroke-width="1.5" stroke="#ffffff" fill="none"></line>
+                        <line stroke-linecap="null" stroke-linejoin="null" id="svg_13" y2="36.624998" x2="42.8125" y1="23.125" x1="57.812498" stroke-width="1.5" stroke="#ffffff" fill="none"></line>
+                        <text stroke="#000000" transform="matrix(0.9835922179106751,0,0,0.9779735803604126,-3.3495292350167274,0.8101592473685741) " xml:space="preserve" text-anchor="left" font-family="Helvetica, Arial, sans-serif" font-size="24" id="svg_16" y="30.874999" x="3.437507" stroke-dasharray="5,5" stroke-width="0" fill="#24b7f2">on</text>
+                    </g>
+                </svg></a>
+            </div>
+            <div class="collapse navbar-collapse">
+                <ul class="nav navbar-nav">
+                    <li><a href="/">Главная</a>
+                    </li>
+                </ul>
+            </div><!-- /.navbar-collapse -->
+        </nav>
+    </div>
+    <div class="row">
+        <div class="col-lg-12 col-xs-12 videoplayer">
+            <div class="embed-responsive embed-responsive-16by9">
+                ${player}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-9 col-xs-12 videolink">
+                    <span class="viewing"><svg width="30" height="17" xmlns="http://www.w3.org/2000/svg" class="icon">
+                        <!--— Created with Method Draw - http://github.com/duopixel/Method-Draw/ —-->
+                        <g>
+                            <title>background</title>
+                            <rect fill="none" id="canvas_background" height="19" width="32" y="-1" x="-1"></rect>
+                            <g display="none" overflow="visible" y="0" x="0" height="100%" width="100%" id="canvasGrid">
+                                <rect fill="url(#gridpattern)" stroke-width="0" y="0" x="0" height="100%" width="100%"></rect>
+                            </g>
+                        </g>
+                        <g>
+                            <title>Layer 1</title>
+                            <ellipse stroke="#666666" ry="7.66662" rx="14.08324" id="svg_3" cy="8.48765" cx="15" stroke-width="1.5" fill="#7f7f7f"></ellipse>
+                            <ellipse stroke="#7f7f7f" ry="5.93749" rx="5.62499" id="svg_4" cy="8.2689" cx="15.09375" stroke-width="1.5" fill="#ffffff"></ellipse>
+                            <ellipse stroke="#7f7f7f" ry="1.53124" rx="1.80347" id="svg_6" cy="8.22014" cx="15.19958" stroke-width="1.5" fill="#7f7f7f"></ellipse>
+                        </g>
+                    </svg><span id="watchers">1</span> зрител.</span>
+            <div class="input-group">
+                <span class="input-group-addon" style="color: #fff; background-color: #428bca; border-color: #357ebd;" id="basic-addon1">Ссылка на просмотр</span><input type="text" class="form-control" placeholder="ссылка на просмотр" aria-describedby="ссылка на просмотр" value="" id="link" onload="javascript:window.location"><span class="input-group-btn"></span>
+            </div>
+        </div>
+        <div class="col-lg-3 col-xs-12 videolink">
+            <script type="text/javascript">(function() {
+  if (window.pluso)if (typeof window.pluso.start == "function") return;
+  if (window.ifpluso==undefined) { window.ifpluso = 1;
+    var d = document, s = d.createElement('script'), g = 'getElementsByTagName';
+    s.type = 'text/javascript'; s.charset='UTF-8'; s.async = true;
+    s.src = ('https:' == window.location.protocol ? 'https' : 'http')  + '://share.pluso.ru/pluso-like.js';
+    var h=d[g]('body')[0];
+    h.appendChild(s);
+  }})();</script>
+            <div class="pluso" data-background="#ebebeb" data-options="medium,round,line,horizontal,nocounter,theme=04" data-services="vkontakte,odnoklassniki,facebook,twitter,google,moimir" data-user="2043090226"></div>
+        </div>
+        </div>
+    <div class="row">
+        <hr>
+    </div>
+    <div class="row">
+        <div class="col-lg-12 col-xs-12 centered">
+            <p class="text-muted">© OnPlay, 2015</p>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    var reformalOptions = {
+        project_id: 850985,
+        project_host: "onplayme.reformal.ru",
+        tab_orientation: "left",
+        tab_indent: "50%",
+        tab_bg_color: "#F05A00",
+        tab_border_color: "#FFFFFF",
+        tab_image_url: "http://tab.reformal.ru/T9GC0LfRi9Cy0Ysg0Lgg0L%252FRgNC10LTQu9C%252B0LbQtdC90LjRjw==/FFFFFF/2a94cfe6511106e7a48d0af3904e3090/left/1/tab.png",
+        tab_border_width: 2
+    };
+
+    (function() {
+        var script = document.createElement('script');
+        script.type = 'text/javascript'; script.async = true;
+        script.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'media.reformal.ru/widgets/v3/reformal.js';
+        document.getElementsByTagName('head')[0].appendChild(script);
+    })();
+</script><noscript><a href="http://reformal.ru"><img src="http://media.reformal.ru/reformal.png" /></a><a href="http://onplayme.reformal.ru">Oтзывы и предложения для OnPlay.me</a></noscript>
+<script>
+var leftProgress = document.getElementsByClassName('progressBar')[0].getBoundingClientRect().left;
+var widthProgress = document.getElementsByClassName('progressBar')[0].getBoundingClientRect().width;
+var percentProgress = widthProgress / 100;
+
+var leftVolume = document.getElementsByClassName('progressBar')[1].getBoundingClientRect().left;
+var widthVolume = document.getElementsByClassName('progressBar')[1].getBoundingClientRect().width;
+var percentVolume = widthVolume / 100;
+
+window.onresize = function(event) {
+    leftProgress = document.getElementsByClassName('progressBar')[0].getBoundingClientRect().left;
+    widthProgress = document.getElementsByClassName('progressBar')[0].getBoundingClientRect().width;
+    percentProgress = widthProgress / 100;
+
+    leftVolume = document.getElementsByClassName('progressBar')[1].getBoundingClientRect().left;
+    widthVolume = document.getElementsByClassName('progressBar')[1].getBoundingClientRect().width;
+    percentVolume = widthVolume / 100;
+};
+
+var mousedownProgress = 0;
+var mousedownVolume = 0;
+document.body.addEventListener('mousemove', (function(e) {
+  e = e || window.event;
+  posX = e.pageX;
+  if(mousedownProgress == 1){
+ var positionProgress = posX - leftProgress;
+ if(posX < 0){
+ positionProgress = 0;
+ }
+ if(posX > widthProgress + leftProgress){
+ positionProgress = widthProgress;
+ }
+ document.getElementsByClassName('timeBar')[1].style.width = positionProgress / percentProgress + '%';
+  }
+  if(mousedownVolume == 1){
+     var positionVolume = posX - leftVolume;
+ if(posX < 0){
+ positionVolume = 0;
+ }
+ if(posX > widthVolume + leftVolume){
+ positionVolume = widthVolume;
+ }
+ player.setVolume(positionVolume / percentVolume);
+ document.getElementsByClassName('timeBar')[2].style.width = positionVolume / percentVolume + '%';
+  }
+}
+))
+ document.getElementsByClassName('progressBar')[0].addEventListener('mousedown', (function(e) {
+ mousedownProgress = 1;
+    document.body.onselectstart = function(){
+      return false;
+    }
+    document.getElementsByClassName('timeBar')[0].style.display = 'none';
+         document.getElementsByClassName('timeBar')[1].style.display = 'block';
+     document.body.addEventListener('mouseup', (function scrollDrag(e) {
+ mousedownProgress = 0;
+ var positionProgress = posX - leftProgress;
+ if(posX < 0){
+ positionProgress = 0;
+ }
+ if(posX > widthProgress + leftProgress){
+ positionProgress = widthProgress;
+ }
+ document.getElementsByClassName('timeBar')[1].style.width = positionProgress / percentProgress + '%';
+ Seeked(positionProgress / percentProgress * percentVideo);
+ playerSeeked(positionProgress / percentProgress * percentVideo);
+     document.getElementsByClassName('timeBar')[0].style.display = 'block';
+     document.getElementsByClassName('timeBar')[1].style.display = 'none';
+ document.body.removeEventListener('mouseup', scrollDrag);
+}
+))
+}
+))
+ document.getElementsByClassName('progressBar')[1].addEventListener('mousedown', (function(e) {
+ mousedownVolume = 1;
+    document.body.onselectstart = function(){
+      return false;
+    }
+     document.body.addEventListener('mouseup', (function scrollDragVolume(e) {
+ mousedownVolume = 0;
+ var positionVolume = posX - leftVolume;
+ if(posX < 0){
+ positionVolume = 0;
+ }
+ if(posX > widthVolume + leftVolume){
+ positionVolume = widthVolume;
+ }
+ document.getElementsByClassName('timeBar')[2].style.width = positionVolume / percentVolume + '%';
+ player.setVolume(positionVolume / percentVolume);
+ document.body.removeEventListener('mouseup', scrollDragVolume);
+}
+))
+}
+))
+
+
+function requestBufferingTime(){
+    var currentTime = player.getCurrentTime();
+    document.getElementById('currentTime').innerHTML = fromSeconds(currentTime);
+    document.getElementsByClassName('bufferBar')[0].style.width = player.getVideoLoadedFraction() * 100 + '%';
+    document.getElementsByClassName('timeBar')[0].style.width = currentTime / percentVideo + '%';
+}
+
+document.getElementsByClassName('play')[0].addEventListener('click', function() {
+    player.playVideo();
+ })
+ document.getElementsByClassName('pause')[0].addEventListener('click', (function() {
+    player.pauseVideo();
+ }))
+  document.getElementsByClassName('fullscreen')[0].addEventListener("click", function() {
+    var element = document.getElementsByClassName('videoplayer')[0];
+  if(element.requestFullscreen) {
+    element.requestFullscreen();
+  } else if(element.mozRequestFullScreen) {
+    element.mozRequestFullScreen();
+  } else if(element.webkitRequestFullscreen) {
+    element.webkitRequestFullscreen();
+  } else if(element.msRequestFullscreen) {
+    element.msRequestFullscreen();
+  }
+
+})
+    document.getElementsByClassName('fullscreenExit')[0].addEventListener("click", function() {
+  if(document.exitFullscreen) {
+    document.exitFullscreen();
+  } else if(document.mozCancelFullScreen) {
+    document.mozCancelFullScreen();
+  } else if(document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+  } else if (document.msExitFullscreen) {
+    document.msExitFullscreen();
+}
+})
+function startFullScreen(){
+    document.getElementsByClassName('fullscreen')[0].style.display = 'none';
+    document.getElementsByClassName('fullscreenExit')[0].style.display = 'block';
+    document.getElementsByClassName('videoplayer')[0].style.border = 'none';
+    document.getElementsByClassName('embed-responsive embed-responsive-16by9')[0].className = 'fullScreenPlayer';
+
+}
+function exitFullScreen(){
+    document.getElementsByClassName('fullscreen')[0].style.display = 'block';
+    document.getElementsByClassName('fullscreenExit')[0].style.display = 'none';
+    document.getElementsByClassName('videoplayer')[0].style.border = '1px solid #e7e7e7';
+    document.getElementsByClassName('fullScreenPlayer')[0].className = 'embed-responsive embed-responsive-16by9';
+}
+document.addEventListener("fullscreenchange", function() {
+if(document.fullscreenElement){
+    startFullScreen();
+} else{
+exitFullScreen();
+}
+});
+document.addEventListener("mozfullscreenchange", function() {
+if(document.mozFullScreenElement){
+    startFullScreen();
+} else{
+exitFullScreen();
+}
+});
+document.addEventListener("webkitfullscreenchange", function() {
+if(document.webkitFullscreenElement){
+    startFullScreen();
+} else{
+exitFullScreen();
+}
+});
+document.addEventListener("msfullscreenchange", function() {
+if(document.msFullscreenElement){
+    startFullScreen();
+} else{
+exitFullScreen();
+}});
+ </script>
+</body></html>

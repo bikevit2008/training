@@ -1,0 +1,78 @@
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script>
+        function playerPlay(){
+            post('play');
+        }
+        function playerPause(){
+            post('pause');
+        }
+        function playerSeeked(seconds){
+            post('seekTo', seconds);
+        }
+function post(action, value){
+ $(function() {
+     var player = $('iframe');
+    var url = window.location.protocol + player.attr('src').split('?')[0];
+    posting(action, value);
+        function posting(action, value) {
+        var data = {
+          method: action
+        };
+
+        if (value) {
+            data.value = value;
+        }
+
+        var message = JSON.stringify(data);
+        player[0].contentWindow.postMessage(data, url);
+    }
+});
+}
+ $(function() {
+    // Listen for messages from the player
+    if (window.addEventListener){
+        window.addEventListener('message', onMessageReceived, false);
+    }
+    else {
+        window.attachEvent('onmessage', onMessageReceived, false);
+    }
+
+    // Handle messages received from the player
+    function onMessageReceived(e) {
+        var data = JSON.parse(e.data);
+
+        switch (data.event) {
+            case 'ready':
+                onReady();
+                break;
+
+            case 'playProgress':
+                currentTime=(data.data.seconds);
+                break;
+
+            case 'pause':
+                Pause();
+                break;
+
+            case 'play':
+                Play();
+                break;
+            case 'seek':
+                Seeked(data.data.seconds);
+                break;
+        }
+    }
+
+
+    function onReady() {
+        post('addEventListener', 'pause');
+        post('addEventListener', 'play');
+        post('addEventListener', 'seek');
+        post('addEventListener', 'playProgress')
+    }
+
+
+
+});
+
+</script>

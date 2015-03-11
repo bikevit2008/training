@@ -30,6 +30,11 @@
             <artifactId>wicket-core</artifactId>
             <version>7.0.0-M4</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.3.6</version>
+        </dependency>
     </dependencies>
     
     <build>

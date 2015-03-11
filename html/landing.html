@@ -60,7 +60,9 @@ div.room-url>p>span{
         var result = document.getElementById('result');
         result.innerHTML = window.location + "room/"+ parsed.value;
         var resultLink = document.getElementById('result-link');
-        resultLink.href = "/room/"+ parsed.value;}
+        resultLink.href = "/room/"+ parsed.value;
+        window.location.href = window.location + "room/"+ parsed.value;
+        }
       };
       socket.onopen = function(event) {
       };
@@ -81,8 +83,16 @@ div.room-url>p>span{
 	var parser = document.createElement('a');
 	parser.href = document.getElementById('link').value;
 	var result = document.getElementById('result').innerHTML;
+	if(parser.href.indexOf('youtube') > -1){
+	result = parseId(endsWith(parser.href));
+	}
+	else if(parser.href.indexOf('vimeo') > -1){
 	result = parseId(endsWith(parser.pathname));
-	if(result.length > 0){
+	}
+	else{
+
+	}
+	if(result.length > 0 && result !== 'Неправильная ссылка'){
 	send(JSON.stringify({'method' : 'VideoId', 'value': result}));
 	}
 }
@@ -95,11 +105,25 @@ div.room-url>p>span{
     }
     }
     function parseId(str){
+    if(str.indexOf("youtube") > -1){
+    var vYT = str.indexOf('v=') + 2;
+    var substr = str.substring(vYT);
+    if(substr.indexOf('&') > -1){
+    var ampYT = substr.indexOf('&');
+    substr = substr.substring(0, ampYT);
+    }
+    return substr;
+    }
+    else if(str.indexOf("vimeo") > -1){
     var out = str.substring(str.lastIndexOf("/") + 1);
     return out;
     }
+    else{
+    return 'Неправильная ссылка';
+    }
+    }
 </script>
-    <script>
+    <!--script>
         (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -131,7 +155,7 @@ div.room-url>p>span{
          d.addEventListener("DOMContentLoaded", f, false);
          } else { f(); }
          })(document, window, "yandex_metrika_callbacks");
-        </script>
+        </script-->
     </head>
 
     <body>
@@ -197,6 +221,24 @@ div.room-url>p>span{
         </div>
 
     </div>
+    <script type="text/javascript">
+    var reformalOptions = {
+        project_id: 850985,
+        project_host: "onplayme.reformal.ru",
+        tab_orientation: "left",
+        tab_indent: "50%",
+        tab_bg_color: "#F05A00",
+        tab_border_color: "#FFFFFF",
+        tab_image_url: "http://tab.reformal.ru/T9GC0LfRi9Cy0Ysg0Lgg0L%252FRgNC10LTQu9C%252B0LbQtdC90LjRjw==/FFFFFF/2a94cfe6511106e7a48d0af3904e3090/left/1/tab.png",
+        tab_border_width: 2
+    };
 
+    (function() {
+        var script = document.createElement('script');
+        script.type = 'text/javascript'; script.async = true;
+        script.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'media.reformal.ru/widgets/v3/reformal.js';
+        document.getElementsByTagName('head')[0].appendChild(script);
+    })();
+</script><noscript><a href="http://reformal.ru"><img src="http://media.reformal.ru/reformal.png" /></a><a href="http://onplayme.reformal.ru">Oтзывы и предложения для OnPlay.me</a></noscript>
 </body>
 </html>

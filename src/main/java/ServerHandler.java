@@ -27,6 +27,9 @@ import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -40,7 +43,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  */
     public class ServerHandler extends SimpleChannelInboundHandler<Object>{
     public String RoomUri;
-    public int RoomUsersNow;
     DB db = DBMaker
             .newFileDB(new File("DB"))
             .closeOnJvmShutdown()
@@ -54,8 +56,11 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
     public void channelInactive(ChannelHandlerContext ctx){
         if(rooms.containsKey(RoomUri)){
             rooms.get(RoomUri).remove(ctx.channel());
-
             rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame(JSON.encode("CountUsersOnline", String.valueOf(rooms.get(RoomUri).size()))));
+            if(rooms.get(RoomUri).size() == 0){
+                rooms.get(RoomUri).clear(); // Надо доделать
+                rooms.remove(RoomUri);
+            }
         }
     }
 
@@ -74,7 +79,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
     }
-
+    ChannelGroup room;
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
         String format = req.getUri().toString();
         String substringAfter = format.substring(format.lastIndexOf("m") + 2);
@@ -85,14 +90,14 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
             }
             else{
-                ChannelGroup room = new DefaultChannelGroup(RoomUri ,GlobalEventExecutor.INSTANCE);
+                room = new DefaultChannelGroup(RoomUri ,GlobalEventExecutor.INSTANCE);
                 rooms.put(RoomUri, room);
 
             }
         }
         else if(req.getUri().toString().replace("/", "").equals("websocket")){
 
-            ChannelGroup room = new DefaultChannelGroup("websocket" ,GlobalEventExecutor.INSTANCE);
+            room = new DefaultChannelGroup("websocket" ,GlobalEventExecutor.INSTANCE);
 
             rooms.put(RoomUri, room);
 
@@ -142,6 +147,36 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             sendHttpResponse(ctx, req, res);
             return;
         }
+         else if (req.getUri().equals("/player")) {
+             ByteBuf content = player.getContent();
+             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
+
+             res.headers().set("Content-Type", "text/html; charset=UTF-8");
+             HttpHeaders.setContentLength(res, content.readableBytes());
+             sendHttpResponse(ctx, req, res);
+             return;
+         }
+         else if (req.getUri().contains("/resources")) {
+
+             byte[] data = new byte[0];
+             try {
+                 data = Files.readAllBytes(Paths.get("./html/resources" + req.getUri().substring(10)));
+
+                 ByteBuf content = Unpooled.copiedBuffer(data);
+                 FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
+                 sendHttpResponse(ctx, req, res);
+                 return;
+             } catch (IOException e) {
+                 e.printStackTrace();
+
+
+                 FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FOUND);
+                 res.headers().set("Location", "/404");
+                 res.headers().set("Content-Type", "text/html; charset=UTF-8");
+                 sendHttpResponse(ctx, req, res);
+             }
+             return;
+         }
         else if(req.getUri().contains("websocket")){
         // Handshake
         WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
@@ -187,10 +222,11 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
         System.out.println(rooms.get(RoomUri));
         System.out.println(rooms);
         if(rooms.containsKey(RoomUri)){
-
+            if(!rooms.get(RoomUri).contains(ctx.channel())){
             rooms.get(RoomUri).add(ctx.channel());
             rooms.get(RoomUri).writeAndFlush(new TextWebSocketFrame(JSON.encode("CountUsersOnline", String.valueOf(rooms.get(RoomUri).size()))));
 
+        }
         }
         if(rooms.get("websocket") != null){
         if(rooms.get("websocket").contains(ctx.channel()))
@@ -213,6 +249,9 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
                     ch.writeAndFlush(new TextWebSocketFrame(JSON.encode("Pause", "")));
                 } else if(JSON.parseMethod(request).equals("CurrentTime")){
                     ch.writeAndFlush(new TextWebSocketFrame(JSON.encode("CurrentTime", JSON.parseValue(request))));
+                }
+                else if (JSON.parseMethod(request).equals("Buffering")){
+                    ch.writeAndFlush(new TextWebSocketFrame(JSON.encode("Buffering", "")));
                 }
             }
         }

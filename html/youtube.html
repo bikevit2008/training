@@ -1,0 +1,96 @@
+<script>
+      // 2. This code loads the IFrame Player API code asynchronously.
+      var tag = document.createElement('script');
+
+      tag.src = "https://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+      // 3. This function creates an <iframe> (and YouTube player)
+      //    after the API code downloads.
+      var player;
+
+      function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+          height: '100%',
+          width: '100%',
+          videoId: '${videoId}',
+          playerVars: { 'controls': 0, 'rel': 0, 'disablekb': 1, 'fs': 0, 'showinfo': 0},
+          events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+          }
+        });
+      }
+      // 4. The API will call this function when the video player is ready.
+      function onPlayerReady(event) {
+      duration = player.getDuration();
+      document.getElementById('duration').innerHTML = fromSeconds(duration);
+      percentVideo = duration / 100;
+      document.getElementsByClassName('timeBar')[2].style.width = player.getVolume() + '%';
+      setInterval(requestBufferingTime, 100);
+      }
+      // 5. The API calls this function when the player's state changes.
+      //    The function indicates that when playing a video (state=1),
+      //    the player should play for six seconds and then stop.
+      function onPlayerStateChange(event) {
+                if (event.data == YT.PlayerState.PLAYING) {
+                document.getElementsByClassName('play')[0].style.display = 'none';
+                document.getElementsByClassName('pause')[0].style.display = 'block';
+                if(playerStatusGot == ""){
+                Play();
+                }
+                else{
+              playerStatusGot = "";
+                }
+        }
+        if(event.data == YT.PlayerState.PAUSED){
+                document.getElementsByClassName('pause')[0].style.display = 'none';
+                document.getElementsByClassName('play')[0].style.display = 'block';
+                if(playerStatusGot == ""){
+                Pause();
+                }
+                else{
+              playerStatusGot = "";
+              }
+        }
+        if(event.data == YT.PlayerState.BUFFERING){
+             Pause();
+             playerStatusGot = "";
+        }
+        }
+        function playerPlay(){
+            playerStatusGot = "Play";
+            player.playVideo();
+            }
+        function playerPause(){
+            if(player.getPlayerState() !== 3){
+            playerStatusGot = "Pause";
+            player.pauseVideo();
+        }
+        }
+        function playerSeeked(seconds){
+                player.seekTo(seconds);
+                document.getElementsByClassName('timeBar')[0].style.width = seconds / percentVideo + '%'
+        }
+        function playerBuffering(){
+            playerStatusGot = "Buffering";
+            player.pauseVideo();
+        }
+    function fromSeconds(secs) {
+    var sec_num = parseInt(secs, 10); // don't forget the second param
+    var hours   = Math.floor(sec_num / 3600);
+    var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+    var seconds = sec_num - (hours * 3600) - (minutes * 60);
+
+    if (hours   < 10) {hours   = "0"+hours;}
+    if (minutes < 10) {minutes = "0"+minutes;}
+    if (seconds < 10) {seconds = "0"+seconds;}
+    if(hours == 0){
+    var time = minutes+':'+seconds;
+    }else{
+    var time = hours+':'+minutes+':'+seconds;
+    }
+    return time;
+}
+    </script>

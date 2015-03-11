@@ -1,10 +1,7 @@
 /**
  * Created by user-325 on 22.01.2015.
  */
-import sun.net.www.http.HttpClient;
 
-import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Scanner;
