@@ -147,15 +147,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
             sendHttpResponse(ctx, req, res);
             return;
         }
-         else if (req.getUri().equals("/player")) {
-             ByteBuf content = player.getContent();
-             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
-
-             res.headers().set("Content-Type", "text/html; charset=UTF-8");
-             HttpHeaders.setContentLength(res, content.readableBytes());
-             sendHttpResponse(ctx, req, res);
-             return;
-         }
          else if (req.getUri().contains("/resources")) {
 
              byte[] data = new byte[0];
